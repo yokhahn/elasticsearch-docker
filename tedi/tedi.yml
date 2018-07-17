@@ -1,0 +1,12 @@
+images:
+  elasticsearch/elasticsearch-full:
+    facts:
+      image_flavor: full
+
+  elasticsearch/elasticsearch-oss:
+    facts:
+      image_flavor: oss
+
+facts:
+  elastic_version: 6.3.1
+  docker_registry: docker.elastic.co

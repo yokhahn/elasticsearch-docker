@@ -39,7 +39,7 @@ endif
 all: build test
 
 # Test specified versions without building
-test: lint docker-compose
+test: lint
 	docker run --rm -v "$(PWD):/mnt" bash rm -rf /mnt/tests/datadir1 /mnt/tests/datadir2
 	$(foreach FLAVOR, $(IMAGE_FLAVORS), \
 	  pyfiglet -w 160 -f puffy "test: $(FLAVOR) single"; \

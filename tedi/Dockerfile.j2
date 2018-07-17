@@ -15,10 +15,10 @@
 {%   set tarball_dir = 'distribution/archives/tar/build/distributions' -%}
 {% endif -%}
 
-{% if artifacts_dir -%}
+{% if artifacts_dir is defined-%}
 {%   set url_root = 'http://elasticsearch-docker-artifact-server:8000/elasticsearch/%s' % tarball_dir -%}
 {%   set plugin_url_root = 'http://elasticsearch-docker-artifact-server:8000/elasticsearch/plugins' -%}
-{% elif staging_build_num -%}
+{% elif staging_build_num is defined -%}
 {%   set version_tag = version_tag + '-' + staging_build_num -%}
 {%   set url_root = 'https://staging.elastic.co/%s/downloads/elasticsearch' % version_tag -%}
 {% elif elastic_version.endswith('-SNAPSHOT') -%}
@@ -57,11 +57,11 @@ RUN set -ex && for esdirs in config data logs; do \
     done
 
 # Install the ingest-{agent,geoip} modules required for Filebeat
-{% if artifacts_dir -%}
+{% if artifacts_dir is defined -%}
 RUN for PLUGIN in {{ ingest_plugins }}; do \
       elasticsearch-plugin install --batch "{{ plugin_url_root }}/$PLUGIN/build/distributions/$PLUGIN-{{ elastic_version }}.zip"; \
     done
-{% elif staging_build_num -%}
+{% elif staging_build_num is defined -%}
 RUN for PLUGIN in {{ ingest_plugins }}; do \
       eval ES_JAVA_OPTS="-Des.plugins.staging={{ staging_build_num }}" elasticsearch-plugin install --batch "$PLUGIN"; \
     done
