@@ -1,9 +1,14 @@
 images:
-  elasticsearch/elasticsearch-full:
+  elasticsearch-full:
+    aliases:
+      - elasticsearch
+      - docker.elastic.co/elasticsearch/elasticsearch
     facts:
       image_flavor: full
 
-  elasticsearch/elasticsearch-oss:
+  elasticsearch-oss:
+    aliases:
+      - docker.elastic.co/elasticsearch/elasticsearch-oss
     facts:
       image_flavor: oss
 
