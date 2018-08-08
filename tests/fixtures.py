@@ -206,7 +206,7 @@ def elasticsearch(host):
 
         def get_docker_log(self):
             proc = run(['docker-compose', 'logs', self.get_hostname()],
-                       cwd='.tedi/render/elasticsearch/elasticsearch-%s' % self.flavor,
+                       cwd='.tedi/render/elasticsearch-%s' % self.flavor,
                        stdout=PIPE)
             return proc.stdout.decode()
 

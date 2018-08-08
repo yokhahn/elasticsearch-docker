@@ -1,5 +1,14 @@
-SHELL=/bin/bash
+SHELL = /bin/bash
 ELASTIC_REGISTRY ?= docker.elastic.co
+
+TEDI ?=	docker.elastic.co/tedi/tedi:0.5
+TEDI_DEBUG ?= false
+
+DOCKER_RUN ?= docker run --rm -it \
+ -v /var/run/docker.sock:/var/run/docker.sock \
+ -v $(PWD):/mnt \
+ -e TEDI_DEBUG=$(TEDI_DEBUG)
+
 
 export PATH := ./bin:./venv/bin:$(PATH)
 
@@ -119,23 +128,7 @@ build-from-local-artifacts: venv dockerfile docker-compose
 
 # Build images from the latest snapshots on snapshots.elastic.co
 from-snapshot:
-	rm -rf snapshots
-
-	mkdir -p snapshots/elasticsearch/distribution/archives/tar/build/distributions
-	(cd snapshots/elasticsearch/distribution/archives/tar/build/distributions && \
-	  wget https://snapshots.elastic.co/downloads/elasticsearch/elasticsearch-$(ELASTIC_VERSION)-SNAPSHOT.tar.gz)
-
-	mkdir -p snapshots/elasticsearch/distribution/archives/oss-tar/build/distributions
-	(cd snapshots/elasticsearch/distribution/archives/oss-tar/build/distributions && \
-	  wget https://snapshots.elastic.co/downloads/elasticsearch/elasticsearch-oss-$(ELASTIC_VERSION)-SNAPSHOT.tar.gz)
-
-	for plugin in ingest-user-agent ingest-geoip; do \
-	  mkdir -p snapshots/elasticsearch/plugins/$$plugin/build/distributions; \
-	  (cd snapshots/elasticsearch/plugins/$$plugin/build/distributions && \
-	    wget https://snapshots.elastic.co/downloads/elasticsearch-plugins/$$plugin/$$plugin-$(ELASTIC_VERSION)-SNAPSHOT.zip); \
-	done
-
-	ARTIFACTS_DIR=$$PWD/snapshots make release-manager-snapshot
+	$(DOCKER_RUN) $(TEDI) build --asset-set=remote_snapshot --fact=image_tag:$(ELASTIC_VERSION)-SNAPSHOT
 
 # Push the images to the dedicated push endpoint at "push.docker.elastic.co"
 push: test
@@ -179,28 +172,3 @@ venv: requirements.txt
 	test -d venv || virtualenv --python=$$PYTHON3 venv;\
 	pip install -r requirements.txt;\
 	touch venv;\
-
-# Generate the Dockerfiles for each image flavor from a Jinja2 template.
-dockerfile: venv templates/Dockerfile.j2
-	$(foreach FLAVOR, $(IMAGE_FLAVORS), \
-	 jinja2 \
-	   -D elastic_version='$(ELASTIC_VERSION)' \
-	   -D staging_build_num='$(STAGING_BUILD_NUM)' \
-	   -D artifacts_dir='$(ARTIFACTS_DIR)' \
-	   -D image_flavor='$(FLAVOR)' \
-	   templates/Dockerfile.j2 > build/elasticsearch/Dockerfile-$(FLAVOR); \
-	)
-
-# Generate docker-compose and tests/docker-compose fragment files
-# for each image flavor from a Jinja2 template.
-docker-compose: venv templates/docker-compose.yml.j2 templates/docker-compose-fragment.yml.j2
-	$(foreach FLAVOR, $(IMAGE_FLAVORS), \
-	 jinja2 \
-	  -D elastic_registry='$(ELASTIC_REGISTRY)' \
-	  -D version_tag='$(VERSION_TAG)' \
-	  -D image_flavor='$(FLAVOR)' \
-	  templates/docker-compose.yml.j2 > docker-compose-$(FLAVOR).yml; \
-	 jinja2 \
-	  -D image_flavor='$(FLAVOR)' \
-	  templates/docker-compose-fragment.yml.j2 > tests/docker-compose-$(FLAVOR).yml; \
-	)

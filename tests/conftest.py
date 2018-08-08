@@ -55,15 +55,16 @@ def pytest_configure(config):
     if config.getoption('--single-node'):
         compose_cli.append('elasticsearch1')
 
-    run(compose_cli,
-        env=env_vars,
-        cwd='.tedi/render/elasticsearch/elasticsearch-%s' % image_flavor)
+    startup_result = run(compose_cli,
+                         env=env_vars,
+                         cwd='.tedi/render/elasticsearch-%s' % image_flavor)
+    startup_result.check_returncode()
 
 
 def pytest_unconfigure(config):
     image_flavor = config.getoption('--image-flavor')
     run(['docker-compose', 'down', '-v'],
-        cwd='.tedi/render/elasticsearch/elasticsearch-%s' % image_flavor)
+        cwd='.tedi/render/elasticsearch-%s' % image_flavor)
 
     run(['docker-compose', 'rm', '-f', '-v'],
-        cwd='.tedi/render/elasticsearch/elasticsearch-%s' % image_flavor)
+        cwd='.tedi/render/elasticsearch-%s' % image_flavor)

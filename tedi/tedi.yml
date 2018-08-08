@@ -3,6 +3,7 @@ images:
     aliases:
       - elasticsearch
       - docker.elastic.co/elasticsearch/elasticsearch
+      - docker.elastic.co/elasticsearch/elasticsearch-full
     facts:
       image_flavor: full
 
@@ -13,5 +14,31 @@ images:
       image_flavor: oss
 
 facts:
-  elastic_version: 6.3.1
+  elastic_version: 6.4.0
+  image_tag: 6.4.0
   docker_registry: docker.elastic.co
+  jdk_version: 10.0.2
+  jdk_url: https://download.java.net/java/GA/jdk10/10.0.2/19aef61b38124481863b1413dce1855f/13/openjdk-10.0.2_linux-x64_bin.tar.gz
+
+asset_sets:
+  default:
+    - filename: elasticsearch-full-{{ elastic_version }}.tar.gz
+      source: https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-{{ elastic_version }}.tar.gz
+    - filename: elasticsearch-oss-{{ elastic_version }}.tar.gz
+      source: https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-oss-{{ elastic_version }}.tar.gz
+
+  remote_snapshot:
+    - filename: elasticsearch-full-{{ elastic_version }}.tar.gz
+      source: https://snapshots.elastic.co/downloads/elasticsearch/elasticsearch-{{ elastic_version }}-SNAPSHOT.tar.gz
+    - filename: elasticsearch-oss-{{ elastic_version }}.tar.gz
+      source: https://snapshots.elastic.co/downloads/elasticsearch/elasticsearch-oss-{{ elastic_version }}-SNAPSHOT.tar.gz
+    - filename: ingest-geoip.zip
+      source: https://snapshots.elastic.co/downloads/elasticsearch-plugins/ingest-geoip/ingest-geoip-{{ elastic_version }}-SNAPSHOT.zip
+    - filename: ingest-user-agent.zip
+      source: https://snapshots.elastic.co/downloads/elasticsearch-plugins/ingest-user-agent/ingest-user-agent-{{ elastic_version }}-SNAPSHOT.zip
+
+  local_snapshot:
+    - filename: elasticsearch-full-{{ elastic_version }}.tar.gz
+      source: file://../../downloads/elasticsearch/elasticsearch-{{ elastic_version }}-SNAPSHOT.tar.gz
+    - filename: elasticsearch-oss-{{ elastic_version }}.tar.gz
+      source: file://../../downloads/elasticsearch/elasticsearch-oss-{{ elastic_version }}-SNAPSHOT.tar.gz
