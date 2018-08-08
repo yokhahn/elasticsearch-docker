@@ -21,12 +21,19 @@ facts:
   jdk_url: https://download.java.net/java/GA/jdk10/10.0.2/19aef61b38124481863b1413dce1855f/13/openjdk-10.0.2_linux-x64_bin.tar.gz
 
 asset_sets:
+  # By default, build from publicly released artifacts.
+  # Note that they may not be available yet for the current {{ elastic_version }}.
   default:
     - filename: elasticsearch-full-{{ elastic_version }}.tar.gz
       source: https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-{{ elastic_version }}.tar.gz
     - filename: elasticsearch-oss-{{ elastic_version }}.tar.gz
       source: https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-oss-{{ elastic_version }}.tar.gz
+    - filename: ingest-geoip.zip
+      source: https://artifacts.elastic.co/downloads/elasticsearch-plugins/ingest-geoip/ingest-geoip-{{ elastic_version }}.zip
+    - filename: ingest-user-agent.zip
+      source: https://artifacts.elastic.co/downloads/elasticsearch-plugins/ingest-user-agent/ingest-user-agent-{{ elastic_version }}.zip
 
+  # Published nightly snapshot artifacts.
   remote_snapshot:
     - filename: elasticsearch-full-{{ elastic_version }}.tar.gz
       source: https://snapshots.elastic.co/downloads/elasticsearch/elasticsearch-{{ elastic_version }}-SNAPSHOT.tar.gz
@@ -37,8 +44,13 @@ asset_sets:
     - filename: ingest-user-agent.zip
       source: https://snapshots.elastic.co/downloads/elasticsearch-plugins/ingest-user-agent/ingest-user-agent-{{ elastic_version }}-SNAPSHOT.zip
 
+  # Snapshot artifacts on the local disk, produced by Release Manager.
   local_snapshot:
     - filename: elasticsearch-full-{{ elastic_version }}.tar.gz
       source: file://../../downloads/elasticsearch/elasticsearch-{{ elastic_version }}-SNAPSHOT.tar.gz
     - filename: elasticsearch-oss-{{ elastic_version }}.tar.gz
       source: file://../../downloads/elasticsearch/elasticsearch-oss-{{ elastic_version }}-SNAPSHOT.tar.gz
+    - filename: ingest-geoip.zip
+      source: file://../../elasticsearch-plugins/ingest-geoip/ingest-geoip-{{ elastic_version }}-SNAPSHOT.zip
+    - filename: ingest-user-agent.zip
+      source: file://../../elasticsearch-plugins/ingest-user-agent/ingest-user-agent-{{ elastic_version }}-SNAPSHOT.zip
