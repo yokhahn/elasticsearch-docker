@@ -47,10 +47,10 @@ asset_sets:
   # Snapshot artifacts on the local disk, produced by Release Manager.
   local_snapshot:
     - filename: elasticsearch-full-{{ elastic_version }}.tar.gz
-      source: file://../../downloads/elasticsearch/elasticsearch-{{ elastic_version }}-SNAPSHOT.tar.gz
+      source: file://{{ ENV_PWD }}/../../build/snapshot-artifacts/elasticsearch/distribution/archives/tar/build/distributions/elasticsearch-{{ elastic_version }}-SNAPSHOT.tar.gz
     - filename: elasticsearch-oss-{{ elastic_version }}.tar.gz
-      source: file://../../downloads/elasticsearch/elasticsearch-oss-{{ elastic_version }}-SNAPSHOT.tar.gz
+      source: file://{{ ENV_PWD }}/../../build/snapshot-artifacts/elasticsearch/distribution/archives/oss-tar/build/distributions/elasticsearch-oss-{{ elastic_version }}-SNAPSHOT.tar.gz
     - filename: ingest-geoip.zip
-      source: file://../../elasticsearch-plugins/ingest-geoip/ingest-geoip-{{ elastic_version }}-SNAPSHOT.zip
+      source: file://{{ ENV_PWD }}/../../build/snapshot-artifacts/elasticsearch/plugins/ingest-geoip/build/distributions/ingest-geoip-{{ elastic_version }}-SNAPSHOT.zip
     - filename: ingest-user-agent.zip
-      source: file://../../elasticsearch-plugins/ingest-user-agent/ingest-user-agent-{{ elastic_version }}-SNAPSHOT.zip
+      source: file://{{ ENV_PWD }}/../../build/snapshot-artifacts/elasticsearch/plugins/ingest-user-agent/build/distributions/ingest-user-agent-{{ elastic_version }}-SNAPSHOT.zip

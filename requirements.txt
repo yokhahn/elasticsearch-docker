@@ -6,4 +6,3 @@ retrying==1.3.3
 testinfra==1.6.0
 pytest
 pyfiglet
-git+https://github.com/elastic/tedi.git

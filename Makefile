@@ -1,13 +1,13 @@
 SHELL = /bin/bash
 ELASTIC_REGISTRY ?= docker.elastic.co
 
-TEDI ?=	docker.elastic.co/tedi/tedi:0.5
 TEDI_DEBUG ?= false
-
-DOCKER_RUN ?= docker run --rm -it \
- -v /var/run/docker.sock:/var/run/docker.sock \
- -v $(PWD):/mnt \
- -e TEDI_DEBUG=$(TEDI_DEBUG)
+TEDI ?= docker run --rm -it \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v $(PWD):/mnt \
+  -e TEDI_DEBUG=$(TEDI_DEBUG) \
+  -e PWD=$(PWD) \
+  docker.elastic.co/tedi/tedi:0.6
 
 
 export PATH := ./bin:./venv/bin:$(PATH)
@@ -42,7 +42,7 @@ else
 	-f docker-compose.hostports.yml
 endif
 
-.PHONY: all dockerfile docker-compose test test-build lint clean pristine run run-single run-cluster build release-manager release-manager-snapshot push
+.PHONY: all dockerfile docker-compose test test-build lint clean pristine build release-manager release-manager-snapshot push
 
 # Default target, build *and* run tests
 all: build test
@@ -80,15 +80,6 @@ pristine: clean
 	-docker rmi -f $(IMAGE_TAG):$(VERSION_TAG)
 	rm -rf venv
 
-# Give us an easy way to start the DEFAULT_IMAGE_FLAVOR
-run: run-single
-
-run-single: build docker-compose
-	$(DOCKER_COMPOSE) up elasticsearch1
-
-run-cluster: build docker-compose
-	$(DOCKER_COMPOSE) up elasticsearch1 elasticsearch2
-
 # Build docker image: "elasticsearch-$(FLAVOR):$(VERSION_TAG)"
 build: clean dockerfile
 	$(foreach FLAVOR, $(IMAGE_FLAVORS), \
@@ -99,9 +90,8 @@ build: clean dockerfile
 	  fi; \
 	)
 
-
 release-manager-snapshot: clean
-	ARTIFACTS_DIR=$(ARTIFACTS_DIR) ELASTIC_VERSION=$(ELASTIC_VERSION)-SNAPSHOT make build-from-local-artifacts
+	$(TEDI) build --asset-set=local_snapshot --fact=image_tag:$(ELASTIC_VERSION)-SNAPSHOT
 
 release-manager-release: clean
 	ARTIFACTS_DIR=$(ARTIFACTS_DIR) ELASTIC_VERSION=$(ELASTIC_VERSION) make build-from-local-artifacts
@@ -128,7 +118,7 @@ build-from-local-artifacts: venv dockerfile docker-compose
 
 # Build images from the latest snapshots on snapshots.elastic.co
 from-snapshot:
-	$(DOCKER_RUN) $(TEDI) build --asset-set=remote_snapshot --fact=image_tag:$(ELASTIC_VERSION)-SNAPSHOT
+	$(TEDI) build --asset-set=remote_snapshot --fact=image_tag:$(ELASTIC_VERSION)-SNAPSHOT
 
 # Push the images to the dedicated push endpoint at "push.docker.elastic.co"
 push: test
