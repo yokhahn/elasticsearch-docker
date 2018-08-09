@@ -5,10 +5,9 @@ TEDI_DEBUG ?= false
 TEDI ?= docker run --rm -it \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v $(PWD):/mnt \
+  -v $(PWD)/../..:/release-manager \
   -e TEDI_DEBUG=$(TEDI_DEBUG) \
-  -e PWD=$(PWD) \
   docker.elastic.co/tedi/tedi:0.6
-
 
 export PATH := ./bin:./venv/bin:$(PATH)
 
@@ -90,31 +89,12 @@ build: clean dockerfile
 	  fi; \
 	)
 
-release-manager-snapshot: clean
-	$(TEDI) build --asset-set=local_snapshot --fact=image_tag:$(ELASTIC_VERSION)-SNAPSHOT
 
 release-manager-release: clean
-	ARTIFACTS_DIR=$(ARTIFACTS_DIR) ELASTIC_VERSION=$(ELASTIC_VERSION) make build-from-local-artifacts
+	$(TEDI) build --asset-set=local_release
 
-# Build from artifacts on the local filesystem, using an http server (running
-# in a container) to provide the artifacts to the Dockerfile.
-build-from-local-artifacts: venv dockerfile docker-compose
-	-docker network create elasticsearch-docker-build
-	docker run --rm -d --name=elasticsearch-docker-artifact-server \
-	           --network=elasticsearch-docker-build -v $(ARTIFACTS_DIR):/mnt \
-	           python:3 bash -c 'cd /mnt && python3 -m http.server'
-	docker run --rm --network=elasticsearch-docker-build centos:7 \
-	           timeout 120 bash -c 'until curl -s elasticsearch-docker-artifact-server:8000 > /dev/null; do sleep 1; done'
-	-$(foreach FLAVOR, $(IMAGE_FLAVORS), \
-	pyfiglet -f puffy -w 160 "Building: $(FLAVOR)"; \
-	docker build --network=elasticsearch-docker-build -t $(IMAGE_TAG)-$(FLAVOR):$(VERSION_TAG) -f build/elasticsearch/Dockerfile-$(FLAVOR) build/elasticsearch || \
-	(docker kill elasticsearch-docker-artifact-server; false); \
-	if [[ $(FLAVOR) == $(DEFAULT_IMAGE_FLAVOR) ]]; then \
-	  docker tag $(IMAGE_TAG)-$(FLAVOR):$(VERSION_TAG) $(IMAGE_TAG):$(VERSION_TAG); \
-	fi; \
-	)
-	docker kill elasticsearch-docker-artifact-server
-	-docker network rm elasticsearch-docker-build
+release-manager-snapshot: clean
+	$(TEDI) build --asset-set=local_snapshot --fact=image_tag:$(ELASTIC_VERSION)-SNAPSHOT
 
 # Build images from the latest snapshots on snapshots.elastic.co
 from-snapshot:
