@@ -1,5 +1,5 @@
 SHELL = /bin/bash
-ELASTIC_REGISTRY ?= docker.elastic.co
+ELASTIC_VERSION := $(shell ./bin/elastic-version)
 
 TEDI_DEBUG ?= false
 TEDI ?= docker run --rm -it \
@@ -11,40 +11,9 @@ TEDI ?= docker run --rm -it \
 
 export PATH := ./bin:./venv/bin:$(PATH)
 
-# Determine the version to build. Override by setting ELASTIC_VERSION env var.
-ELASTIC_VERSION := $(shell ./bin/elastic-version)
-
-ifdef STAGING_BUILD_NUM
-  VERSION_TAG := $(ELASTIC_VERSION)-$(STAGING_BUILD_NUM)
-else
-  VERSION_TAG := $(ELASTIC_VERSION)
-endif
-
-# Build different images tagged as :version-<flavor>
 IMAGE_FLAVORS ?= oss full
 
-# Which image flavor will additionally receive the plain `:version` tag
-DEFAULT_IMAGE_FLAVOR ?= full
-
-IMAGE_TAG ?= $(ELASTIC_REGISTRY)/elasticsearch/elasticsearch
-
-# When invoking docker-compose, use an extra config fragment to map Elasticsearch's
-# listening port to the docker host.
-# For the x-pack security enabled image (platinum), use the fragment we utilize for tests.
-ifeq ($(DEFAULT_IMAGE_FLAVOR),platinum)
-  DOCKER_COMPOSE := docker-compose \
-	-f docker-compose-$(DEFAULT_IMAGE_FLAVOR).yml \
-	-f tests/docker-compose-$(DEFAULT_IMAGE_FLAVOR).yml
-else
-  DOCKER_COMPOSE := docker-compose \
-	-f docker-compose-$(DEFAULT_IMAGE_FLAVOR).yml \
-	-f docker-compose.hostports.yml
-endif
-
-.PHONY: all dockerfile docker-compose test test-build lint clean pristine build release-manager release-manager-snapshot push
-
-# Default target, build *and* run tests
-all: build test
+default: from-release
 
 # Test specified versions without building
 test: lint
@@ -56,75 +25,35 @@ test: lint
 	  ./bin/pytest --image-flavor=$(FLAVOR) tests; \
 	)
 
-# Build and test
-test-build: lint build docker-compose
-
 lint: venv
 	flake8 tests
 
 clean:
 	$(foreach FLAVOR, $(IMAGE_FLAVORS), \
-	if [[ -f "docker-compose-$(FLAVOR).yml" ]]; then \
-	  docker-compose -f docker-compose-$(FLAVOR).yml down && docker-compose -f docker-compose-$(FLAVOR).yml rm -f -v; \
-	fi; \
-	rm -f docker-compose-$(FLAVOR).yml; \
-	rm -f tests/docker-compose-$(FLAVOR).yml; \
-	rm -f build/elasticsearch/Dockerfile-$(FLAVOR); \
-	)
-
-pristine: clean
-	-$(foreach FLAVOR, $(IMAGE_FLAVORS), \
-	docker rmi -f $(IMAGE_TAG)-$(FLAVOR):$(VERSION_TAG); \
-	)
-	-docker rmi -f $(IMAGE_TAG):$(VERSION_TAG)
-	rm -rf venv
-
-# Build docker image: "elasticsearch-$(FLAVOR):$(VERSION_TAG)"
-build: clean dockerfile
-	$(foreach FLAVOR, $(IMAGE_FLAVORS), \
-	  pyfiglet -f puffy -w 160 "Building: $(FLAVOR)"; \
-	  docker build -t $(IMAGE_TAG)-$(FLAVOR):$(VERSION_TAG) -f build/elasticsearch/Dockerfile-$(FLAVOR) build/elasticsearch; \
-	  if [[ $(FLAVOR) == $(DEFAULT_IMAGE_FLAVOR) ]]; then \
-	    docker tag $(IMAGE_TAG)-$(FLAVOR):$(VERSION_TAG) $(IMAGE_TAG):$(VERSION_TAG); \
+	  COMPOSE_FILE=".tedi/render/elasticsearch-$(FLAVOR)/docker-compose.yml"; \
+	  if [[ -f $$COMPOSE_FILE ]]; then \
+	    docker-compose -f $$COMPOSE_FILE down && docker-compose -f $$COMPOSE_FILE rm -f -v; \
 	  fi; \
 	)
+	$(TEDI) clean --clean-assets
 
+# Build images from releases on www.elastic.co
+# The ELASTIC_VERSION specified in this file might not have been released yet,
+# so you may need to override it.
+from-release: clean
+	$(TEDI) build --fact=elastic_version:$(ELASTIC_VERSION)
 
+# Build images from snapshots on snapshots.elastic.co
+from-snapshot: clean
+	$(TEDI) build --asset-set=remote_snapshot --fact=image_tag:$(ELASTIC_VERSION)-SNAPSHOT
+
+# Build release images from within the Release Manager.
 release-manager-release: clean
 	$(TEDI) build --asset-set=local_release
 
+# Build snapshot images from within the Release Manager.
 release-manager-snapshot: clean
 	$(TEDI) build --asset-set=local_snapshot --fact=image_tag:$(ELASTIC_VERSION)-SNAPSHOT
-
-# Build images from the latest snapshots on snapshots.elastic.co
-from-snapshot:
-	$(TEDI) build --asset-set=remote_snapshot --fact=image_tag:$(ELASTIC_VERSION)-SNAPSHOT
-
-# Push the images to the dedicated push endpoint at "push.docker.elastic.co"
-push: test
-	$(foreach FLAVOR, $(IMAGE_FLAVORS), \
-	docker tag $(IMAGE_TAG)-$(FLAVOR):$(VERSION_TAG) push.$(IMAGE_TAG)-$(FLAVOR):$(VERSION_TAG); \
-	echo; echo "Pushing $(IMAGE_TAG)-$(FLAVOR):$(VERSION_TAG)"; echo; \
-	docker push push.$(IMAGE_TAG)-$(FLAVOR):$(VERSION_TAG); \
-	docker rmi push.$(IMAGE_TAG)-$(FLAVOR):$(VERSION_TAG); \
-	)
-
-# Also push the plain named image based on DEFAULT_IMAGE_FLAVOR
-# e.g. elasticsearch-full:6.0.0 and elasticsearch:6.0.0 are the same.
-	@if [[ -z "$$(docker images -q $(IMAGE_TAG):$(VERSION_TAG))" ]]; then\
-	  echo;\
-	  echo "I can't push $(IMAGE_TAG):$(VERSION_TAG)";\
-	  echo "probably because you didn't build the \"$(DEFAULT_IMAGE_FLAVOR)\" image (check your \$$IMAGE_FLAVORS).";\
-	  echo;\
-	  echo "Failing here.";\
-	  echo;\
-	  exit 1;\
-        fi
-
-	docker tag $(IMAGE_TAG):$(VERSION_TAG) push.$(IMAGE_TAG):$(VERSION_TAG)
-	echo; echo "Pushing $(IMAGE_TAG):$(VERSION_TAG)"; echo;
-	docker push push.$(IMAGE_TAG):$(VERSION_TAG)
-	docker rmi push.$(IMAGE_TAG):$(VERSION_TAG)
 
 # The tests are written in Python. Make a virtualenv to handle the dependencies.
 venv: requirements.txt
