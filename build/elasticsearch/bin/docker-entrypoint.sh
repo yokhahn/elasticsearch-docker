@@ -88,6 +88,11 @@ if [[ -d bin/x-pack ]]; then
     fi
 fi
 
+if [ -f /custom/user_init.sh ]
+then
+. /custom/user_init.sh
+fi
+
 if [[ "$(id -u)" == "0" ]]; then
     # If requested and running as root, mutate the ownership of bind-mounts
     if [[ -n "$TAKE_FILE_OWNERSHIP" ]]; then
